@@ -27,7 +27,7 @@ func (c *Controller) Run() {
 }
 
 func (c *Controller) AssociateEip(instanceId, privateDnsName string)  {
-	fmt.Printf("[EC2 InstancesId: %v]\n", instanceId)
+	fmt.Printf("!![EC2 InstancesId: %v]\n", instanceId)
 	allocationId, err := c.Resource.FindNotAllocatedEipAllocationId()
 	if err != nil {
 		fmt.Println(err)

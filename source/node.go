@@ -21,6 +21,9 @@ func NewKubeNode(client kubernetes.Clientset) (*KubeNode, error) {
 
 func (kube *KubeNode) SetLabel(nodeName string, labelKey string, labelValue string) (map[string]string, error) {
 	node := kube.FindNode(nodeName)
+
+	fmt.Printf("nodeName: %s\n, labelKey: %s\n, labelValue: %s\n", nodeName, labelKey, labelValue)
+
 	node.Labels[labelKey] = labelValue
 	node.SetLabels(node.Labels)
 
