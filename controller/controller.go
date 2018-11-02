@@ -30,7 +30,8 @@ func (c *Controller) Run() {
 func (c *Controller) RunOnce() {
 	instanceMap, err := c.Resource.FindAllNotAssociatedEC2InstanceToEip()
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return
 	}
 
 	for instanceId, privateDnsName := range instanceMap {
@@ -44,24 +45,28 @@ func (c *Controller) AssociateEip(instanceId, privateDnsName string)  {
 	allocationId, err := c.Resource.FindNotAllocatedEipAllocationId()
 	if err != nil {
 		log.Error(err)
+		return
 	}
 	log.Info("EIP AllocationId:", allocationId)
 
 	associationId, err := c.Resource.AssociateEipToEC2(allocationId, instanceId)
 	if err != nil {
 		log.Error(err)
+		return
 	}
 	log.Info("AssociationId:", associationId)
 
 	eipGroupName, err := c.Resource.FindEipGroupNameByAllocationId(allocationId)
 	if err != nil {
 		log.Error(err)
+		return
 	}
 	log.Info("EipGroupName:", eipGroupName)
 
 	result, err := c.Source.SetLabel(privateDnsName, "EipGroup", eipGroupName)
 	if err != nil {
 		log.Error(err)
+		return
 	}
 	log.Info("Complete:", result)
 }
