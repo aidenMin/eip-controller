@@ -9,4 +9,4 @@ RUN go get -u github.com/aidenMin/eip-controller
 
 WORKDIR $GOPATH
 
-ENTRYPOINT ['/bin/eip-controller']
+ENTRYPOINT ["./bin/eip-controller"]

@@ -2,11 +2,10 @@ package source
 
 import (
 	"fmt"
-	"github.com/golang/glog"
-	"k8s.io/client-go/kubernetes"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
+	"k8s.io/client-go/kubernetes"
 )
 
 
@@ -23,7 +22,7 @@ func NewKubeNode(client kubernetes.Clientset) (*KubeNode, error) {
 func (kube *KubeNode) SetLabel(nodeName string, labelKey string, labelValue string) (map[string]string, error) {
 	node := kube.FindNode(nodeName)
 
-	glog.Infoln("nodeName: %s\n, labelKey: %s\n, labelValue: %s\n", nodeName, labelKey, labelValue)
+	log.Info("nodeName: %s\n, labelKey: %s\n, labelValue: %s\n", nodeName, labelKey, labelValue)
 
 	node.Labels[labelKey] = labelValue
 	node.SetLabels(node.Labels)

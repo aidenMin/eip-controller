@@ -29,12 +29,12 @@ func NewKubeClient(kubeConfig string) (kubernetes.Clientset, error) {
 
 	config, err := clientcmd.BuildConfigFromFlags("", *c)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 
 	return *clientset, nil

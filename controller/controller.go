@@ -43,25 +43,25 @@ func (c *Controller) AssociateEip(instanceId, privateDnsName string)  {
 	log.Info("EC2 InstancesId:", instanceId)
 	allocationId, err := c.Resource.FindNotAllocatedEipAllocationId()
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	log.Info("EIP AllocationId:", allocationId)
 
 	associationId, err := c.Resource.AssociateEipToEC2(allocationId, instanceId)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	log.Info("AssociationId:", associationId)
 
 	eipGroupName, err := c.Resource.FindEipGroupNameByAllocationId(allocationId)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	log.Info("EipGroupName:", eipGroupName)
 
 	result, err := c.Source.SetLabel(privateDnsName, "EipGroup", eipGroupName)
 	if err != nil {
-		log.Panic(err)
+		log.Error(err)
 	}
 	log.Info("Complete:", result)
 }

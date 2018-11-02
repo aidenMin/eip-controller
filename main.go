@@ -22,27 +22,27 @@ func main() {
 
 	cfg := config.NewConfig()
 	if err := cfg.ParseFlags(os.Args[1:]); err != nil {
-		log.Panic("flag parsing error:", err)
+		log.Error("flag parsing error:", err)
 	}
 
 	p, err := provider.NewAWSProvider()
 	if err != nil {
-		log.Panic("Error creating session", err)
+		log.Error("Error creating session", err)
 	}
 
 	r, err := resource.NewAWSEC2(p)
 	if err != nil {
-		log.Panic("Error", err)
+		log.Error("Error", err)
 	}
 
 	k, err := client.NewKubeClient("")
 	if err != nil {
-		log.Panic("Error creating session", err)
+		log.Error("Error creating session", err)
 	}
 
 	s, err := source.NewKubeNode(k)
 	if err != nil {
-		log.Panic("Error", err)
+		log.Error("Error", err)
 	}
 
 	ctrl := controller.Controller{
