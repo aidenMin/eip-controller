@@ -21,8 +21,8 @@ func NewKubeNode(client kubernetes.Clientset) (*KubeNode, error) {
 
 func (kube *KubeNode) SetLabel(nodeName string, labelKey string, labelValue string) (map[string]string, error) {
 	node := kube.FindNode(nodeName)
-
-	log.Info("nodeName: %s\n, labelKey: %s\n, labelValue: %s\n", nodeName, labelKey, labelValue)
+	log.Info("node:", node)
+	log.Infof("nodeName: %s, labelKey: %s, labelValue: %s", nodeName, labelKey, labelValue)
 
 	node.Labels[labelKey] = labelValue
 	node.SetLabels(node.Labels)
@@ -41,10 +41,12 @@ func (kube *KubeNode) FindNode(nodeName string) *v1.Node {
 	}
 
 	nodes, err := kube.client.CoreV1().Nodes().List(input)
+	log.Info("err:", err)
 	if err != nil {
 		return nil
 	}
 
+	log.Info("len(nodes.Items):", len(nodes.Items))
 	if len(nodes.Items) != 1 {
 		return nil
 	}
