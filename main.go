@@ -18,31 +18,36 @@ func init()  {
 }
 
 func main() {
-	log.Info("================================")
-
 	cfg := config.NewConfig()
 	if err := cfg.ParseFlags(os.Args[1:]); err != nil {
-		log.Panic("flag parsing error:", err)
+		log.Panic(err)
 	}
 
+	logLevel, err := log.ParseLevel(cfg.LogLevel)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.SetLevel(logLevel)
+
+	doProcess(cfg)
+}
+
+func doProcess(cfg *config.Config) {
 	p, err := provider.NewAWSProvider()
 	if err != nil {
-		log.Panic("Error creating session", err)
+		log.Panic(err)
 	}
 
 	r, err := resource.NewAWSEC2(p)
 	if err != nil {
-		log.Panic("Error", err)
+		log.Panic(err)
 	}
 
-	k, err := client.NewKubeClient("")
-	if err != nil {
-		log.Panic("Error creating session", err)
-	}
 
-	s, err := source.NewKubeNode(k)
+	k := client.NewKubeClient(cfg.KubeConfig)
+	s, err := source.NewKubeNode(k, cfg.NodeLabel)
 	if err != nil {
-		log.Panic("Error", err)
+		log.Panic(err)
 	}
 
 	ctrl := controller.Controller{
@@ -50,6 +55,7 @@ func main() {
 		Source:   s,
 		Interval: cfg.Interval,
 	}
+
 	ctrl.Run()
 }
 

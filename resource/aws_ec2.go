@@ -1,9 +1,7 @@
 package resource
 
 import (
-	"errors"
 	"github.com/aidenMin/eip-controller/provider"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
 )
@@ -22,7 +20,7 @@ func NewAWSEC2(provider provider.Provider) (*AWSEC2, error) {
 	}, nil
 }
 
-func (awsec2 *AWSEC2) FindAllNotAssociatedEC2InstanceToEip() (map[string]string, error) {
+func (awsec2 *AWSEC2) FindAllocatableInstance() (map[string]string, error) {
   input := &ec2.DescribeInstancesInput{
     Filters: []*ec2.Filter{
         {
@@ -41,43 +39,36 @@ func (awsec2 *AWSEC2) FindAllNotAssociatedEC2InstanceToEip() (map[string]string,
   return ExtractData(result.Reservations), nil
 }
 
-func (awsec2 *AWSEC2) FindNotAllocatedEipAllocationId() (string, error) {
-  result, err := awsec2.provider.DescribeAddresses(&ec2.DescribeAddressesInput{})
-  if err != nil {
-    return "", err
-  }
-
-  addr := FindAddress(result.Addresses)
-  if addr == nil {
-    return "", errors.New("NotFoundAvailableEipException")
-  }
-  return *addr.AllocationId, nil
-}
-
-func (awsec2 *AWSEC2) FindEipGroupNameByAllocationId(allocationId string) (string, error) {
-  input := &ec2.DescribeAddressesInput{
-      Filters: []*ec2.Filter{
-          {
-              Name: aws.String("allocation-id"),
-              Values: []*string{
-                  aws.String(allocationId),
-              },
-          },
-      },
-  }
-  result, err := awsec2.provider.DescribeAddresses(input)
-  if err != nil {
-    return "", err
-  }
-
-	tag := FindTag(result.Addresses)
-	if tag == nil {
-		return "", errors.New("NotFoundEipGroupException")
+func (awsec2 *AWSEC2) FindAllocatableEip() (string, string, error) {
+	input := &ec2.DescribeAddressesInput{
+		Filters: []*ec2.Filter{
+			{
+				Name: aws.String("tag-key"),
+				Values: []*string{
+					aws.String(tagName),
+				},
+			},
+		},
 	}
-	return *tag.Value, nil
+	result, err := awsec2.provider.DescribeAddresses(input)
+	if err != nil {
+		return "", "", err
+	}
+
+	addr := FilterNotAssociatedAddress(result.Addresses)
+	if addr == nil {
+		return "", "", nil
+	}
+
+	tag := FilterTagByTagName(addr, tagName)
+	if tag == nil {
+		return *addr.AllocationId, "", nil
+	}
+
+	return *addr.AllocationId, *tag.Value, nil
 }
 
-func (awsec2 *AWSEC2) AssociateEipToEC2(allocationId string, instanceId string) (string, error) {
+func (awsec2 *AWSEC2) AssociateAddress(allocationId string, instanceId string) (string, error) {
   result, err := awsec2.provider.AssociateAddress(allocationId, instanceId)
   if err != nil {
     return "", err
@@ -85,29 +76,19 @@ func (awsec2 *AWSEC2) AssociateEipToEC2(allocationId string, instanceId string) 
   return *result.AssociationId, nil
 }
 
-func FindAddress(addresses []*ec2.Address) *ec2.Address {
+func FilterNotAssociatedAddress(addresses []*ec2.Address) *ec2.Address {
 	for _, addr := range addresses {
-
-		// Eip에 연결된 EC2인스턴스가 있다면 패스
-		if addr.AssociationId != nil {
-			continue
-		}
-
-		for _, tag := range addr.Tags {
-			if *tag.Key == string(tagName) {
-				return addr
-			}
+		if addr.AssociationId == nil {
+			return addr
 		}
 	}
 	return nil
 }
 
-func FindTag(addresses []*ec2.Address) *ec2.Tag {
-	for _, addr := range addresses {
-		for _, tag := range addr.Tags {
-			if *tag.Key == tagName {
-				return tag
-			}
+func FilterTagByTagName(address *ec2.Address, tagName string) *ec2.Tag {
+	for _, tag := range address.Tags {
+		if *tag.Key == tagName {
+			return tag
 		}
 	}
 	return nil

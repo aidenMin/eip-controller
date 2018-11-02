@@ -1,8 +1,8 @@
 package source
 
 import (
+	"errors"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -10,21 +10,24 @@ import (
 
 
 type KubeNode struct {
-	client kubernetes.Clientset
+	client 		kubernetes.Clientset
+	nodeLabel	string
 }
 
-func NewKubeNode(client kubernetes.Clientset) (*KubeNode, error) {
+func NewKubeNode(client kubernetes.Clientset, nodeLabel string) (*KubeNode, error) {
 	return &KubeNode{
-		client: client,
+		client: 	client,
+		nodeLabel:	nodeLabel,
 	}, nil
 }
 
-func (kube *KubeNode) SetLabel(nodeName string, labelKey string, labelValue string) (map[string]string, error) {
-	node := kube.FindNode(nodeName)
-	log.Info("node:", node)
-	log.Infof("nodeName: %s, labelKey: %s, labelValue: %s", nodeName, labelKey, labelValue)
+func (kube *KubeNode) SetLabel(nodeName string, labelValue string) (map[string]string, error) {
+	node, err := kube.FindNodeByLabelName(nodeName)
+	if err != nil {
+		return nil, err
+	}
 
-	node.Labels[labelKey] = labelValue
+	node.Labels[kube.nodeLabel] = labelValue
 	node.SetLabels(node.Labels)
 
 	result, err := kube.client.CoreV1().Nodes().Update(node)
@@ -34,22 +37,20 @@ func (kube *KubeNode) SetLabel(nodeName string, labelKey string, labelValue stri
 	return result.Labels, nil
 }
 
-func (kube *KubeNode) FindNode(nodeName string) *v1.Node {
+func (kube *KubeNode) FindNodeByLabelName(nodeName string) (*v1.Node, error) {
 	input := metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("metadata.name=%s", nodeName),
-		LabelSelector: "EipGroup",
+		LabelSelector: kube.nodeLabel,
 	}
 
 	nodes, err := kube.client.CoreV1().Nodes().List(input)
-	log.Info("err:", err)
 	if err != nil {
-		return nil
+		return nil, err
 	}
 
-	log.Info("len(nodes.Items):", len(nodes.Items))
-	if len(nodes.Items) != 1 {
-		return nil
+	if len(nodes.Items) == 0 {
+		return nil, errors.New("not found node")
 	}
 
-	return &nodes.Items[0]
+	return &nodes.Items[0], nil
 }

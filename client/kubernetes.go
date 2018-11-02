@@ -1,7 +1,6 @@
 package client
 
 import (
-	"flag"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -14,28 +13,22 @@ func init()  {
 	})
 }
 
-func NewKubeClient(kubeConfig string) (kubernetes.Clientset, error) {
+func NewKubeClient(kubeConfig string) kubernetes.Clientset {
 	if kubeConfig == "" {
 		if _, err := os.Stat(clientcmd.RecommendedHomeFile); err == nil {
 			kubeConfig = clientcmd.RecommendedHomeFile
 		}
 	}
 
-	c := flag.String(
-		"kubeconfig",
-		kubeConfig,
-		"absolute path to the kubeconfig file")
-	flag.Parse()
-
-	config, err := clientcmd.BuildConfigFromFlags("", *c)
+	config, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
-		log.Error(err)
+		log.Panic(err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		log.Error(err)
+		log.Panic(err)
 	}
 
-	return *clientset, nil
+	return *clientset
 }
