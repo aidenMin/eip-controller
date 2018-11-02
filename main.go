@@ -1,47 +1,48 @@
 package main
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/aidenMin/eip-controller/client"
-	"github.com/aidenMin/eip-controller/controller"
 	"github.com/aidenMin/eip-controller/config"
+	"github.com/aidenMin/eip-controller/controller"
 	"github.com/aidenMin/eip-controller/provider"
 	"github.com/aidenMin/eip-controller/resource"
 	"github.com/aidenMin/eip-controller/source"
+	log "github.com/sirupsen/logrus"
+	"os"
 )
 
+func init()  {
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
+}
+
 func main() {
-	fmt.Println("================================")
+	log.Info("================================")
 
 	cfg := config.NewConfig()
 	if err := cfg.ParseFlags(os.Args[1:]); err != nil {
-		fmt.Printf("flag parsing error: %v\n", err)
+		log.Panic("flag parsing error:", err)
 	}
 
 	p, err := provider.NewAWSProvider()
 	if err != nil {
-		fmt.Println("Error creating session", err)
-		return
+		log.Panic("Error creating session", err)
 	}
 
 	r, err := resource.NewAWSEC2(p)
 	if err != nil {
-		fmt.Println("Error", err)
-		return
+		log.Panic("Error", err)
 	}
 
 	k, err := client.NewKubeClient("")
 	if err != nil {
-		fmt.Println("Error creating session", err)
-		return
+		log.Panic("Error creating session", err)
 	}
 
 	s, err := source.NewKubeNode(k)
 	if err != nil {
-		fmt.Println("Error", err)
-		return
+		log.Panic("Error", err)
 	}
 
 	ctrl := controller.Controller{

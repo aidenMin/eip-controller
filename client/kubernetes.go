@@ -2,11 +2,17 @@ package client
 
 import (
 	"flag"
+	log "github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
 )
 
+func init()  {
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp: true,
+	})
+}
 
 func NewKubeClient(kubeConfig string) (kubernetes.Clientset, error) {
 	if kubeConfig == "" {
@@ -23,12 +29,12 @@ func NewKubeClient(kubeConfig string) (kubernetes.Clientset, error) {
 
 	config, err := clientcmd.BuildConfigFromFlags("", *c)
 	if err != nil {
-		panic(err.Error())
+		log.Panic(err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		log.Panic(err)
 	}
 
 	return *clientset, nil

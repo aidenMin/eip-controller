@@ -3,7 +3,6 @@ package resource
 import (
 	"errors"
 	"github.com/aidenMin/eip-controller/provider"
-	//"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/ec2"
@@ -118,7 +117,6 @@ func ExtractData(reservations []*ec2.Reservation) map[string]string {
 	var data = make(map[string]string)
 	for _, reservation := range reservations {
 		for _, instance := range reservation.Instances {
-			//fmt.Println(instance)
 			data[*instance.InstanceId] = *instance.PrivateDnsName
 		}
 	}
