@@ -1,4 +1,4 @@
-package source
+package k8s
 
 import (
 	"errors"
@@ -22,7 +22,7 @@ func NewKubeNode(client kubernetes.Clientset, nodeLabel string) (*KubeNode, erro
 }
 
 func (kube *KubeNode) SetLabel(nodeName string, labelValue string) (map[string]string, error) {
-	node, err := kube.FindNodeByLabelName(nodeName)
+	node, err := kube.FindByNodeName(nodeName)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func (kube *KubeNode) SetLabel(nodeName string, labelValue string) (map[string]s
 	return result.Labels, nil
 }
 
-func (kube *KubeNode) FindNodeByLabelName(nodeName string) (*v1.Node, error) {
+func (kube *KubeNode) FindByNodeName(nodeName string) (*v1.Node, error) {
 	input := metav1.ListOptions{
 		FieldSelector: fmt.Sprintf("metadata.name=%s", nodeName),
 		LabelSelector: kube.nodeLabel,
@@ -53,4 +53,14 @@ func (kube *KubeNode) FindNodeByLabelName(nodeName string) (*v1.Node, error) {
 	}
 
 	return &nodes.Items[0], nil
+}
+
+
+func (kube *KubeNode) FindLabelValueByNodeName(nodeName string) (string, error) {
+	node, err := kube.FindByNodeName(nodeName)
+	if err != nil {
+		return "", err
+	}
+
+	return node.Labels[kube.nodeLabel], nil
 }

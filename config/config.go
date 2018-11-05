@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	EipTag 		string
 	Interval 	time.Duration
 	KubeConfig	string
 	LogLevel 	string
@@ -14,6 +15,7 @@ type Config struct {
 }
 
 var defaultConfig = &Config{
+	EipTag: 	"EipGroup",
 	Interval: 	time.Minute,
 	KubeConfig:	"",
 	LogLevel:  	logrus.InfoLevel.String(),
@@ -27,6 +29,7 @@ func NewConfig() *Config {
 // ParseFlags adds and parses flags from command line
 func (cfg *Config) ParseFlags(args []string) error {
 	app := kingpin.New("eip-controller", "")
+	app.Flag("eip-tag", "Set the tag of EIP. (default: EipGroup").Default(defaultConfig.EipTag).StringVar(&cfg.EipTag)
 	app.Flag("kubeconfig", "Retrieve target cluster configuration from a Kubernetes configuration file (default: auto-detect)").Default(defaultConfig.KubeConfig).StringVar(&cfg.KubeConfig)
 	app.Flag("interval", "The interval between two consecutive synchronizations in duration format (default: 1m)").Default(defaultConfig.Interval.String()).DurationVar(&cfg.Interval)
 	app.Flag("log-level", "Set the level of logging. (default: info, options: panic, debug, info, warning, error, fatal").Default(defaultConfig.LogLevel).EnumVar(&cfg.LogLevel, allLogLevelsAsStrings()...)

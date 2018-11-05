@@ -1,12 +1,11 @@
 package controller
 
 import (
-	"errors"
 	log "github.com/sirupsen/logrus"
 	"time"
 
+	"github.com/aidenMin/eip-controller/k8s"
 	"github.com/aidenMin/eip-controller/resource"
-	"github.com/aidenMin/eip-controller/source"
 )
 
 func init()  {
@@ -15,50 +14,46 @@ func init()  {
 	})
 }
 
-type EipInfo struct {
-	allocationId	string
-	tagValue		string
-}
-
 type Controller struct {
 	Resource	resource.Resource
-	Source		*source.KubeNode
+	K8s			*k8s.KubeNode
 	Interval 	time.Duration
 }
 
 func (c *Controller) Run() {
 	for {
 		c.RunOnce()
+		log.Info("finished eip-controller")
+
+		c.Verify()
+		log.Info("verified k8s-node-label")
 		time.Sleep(c.Interval)
 	}
 }
 
 func (c *Controller) RunOnce() {
 	// 할당 가능한 EIP 가 있는지 확인한다.
-	_, err := c.FindAllocatableEip()
+	_, err := c.Resource.FindAllocatableEip()
 	if err != nil {
-		log.Warning(err)
 		return
 	}
 
 	// EIP 에 연동되어 있지 않은 EC2 정보를 가져온다.
-	// 반환값은 다읨의 형식을 따른다.
-	// { instanceId string: privateDnsName string }
-	instanceMap, err := c.Resource.FindAllocatableInstance()
+	instanceInfo, err := c.Resource.FindAllocatableInstance()
 	if err != nil {
 		log.Error(err)
 		return
 	}
 
-	for instanceId, privateDnsName := range instanceMap {
-		c.AssociateEip(instanceId, privateDnsName)
+	for _, info := range instanceInfo {
+		c.AssociateEip(info.InstanceId, info.PrivateDnsName)
 	}
 }
 
 func (c *Controller) AssociateEip(instanceId, privateDnsName string)  {
 	// k8s 노드에 특정 label 이 할당되어 있는 EC2에만 프로세스를 수행한다.
 	// label 은 외부에서 지정 가능하며, default 값은 "upbit.com/eip-group"이다.
-	_, err := c.Source.FindNodeByLabelName(privateDnsName)
+	_, err := c.K8s.FindByNodeName(privateDnsName)
 	if err != nil{
 		return
 	}
@@ -66,14 +61,14 @@ func (c *Controller) AssociateEip(instanceId, privateDnsName string)  {
 	log.Info("ec2: ", instanceId)
 
 	// 할당 가능한 Eip's allocationId 를 가져온다.
-	eipInfo, err := c.FindAllocatableEip()
+	eipInfo, err := c.Resource.FindAllocatableEip()
 	if err != nil {
 		return
 	}
-	log.Infof("allocationId: %s, tagValue: %s", eipInfo.allocationId, eipInfo.tagValue)
+	log.Infof("allocationId: %s, tagValue: %s", eipInfo.AllocationId, eipInfo.TagValue)
 
 	// Eip 할당!!
-	associationId, err := c.Resource.AssociateAddress(eipInfo.allocationId, instanceId)
+	associationId, err := c.Resource.AssociateAddress(eipInfo.AllocationId, instanceId)
 	if err != nil {
 		log.Error(err)
 		return
@@ -81,7 +76,7 @@ func (c *Controller) AssociateEip(instanceId, privateDnsName string)  {
 	log.Info("associationId: ", associationId)
 
 	// k8s에 label 설정
-	_, err = c.Source.SetLabel(privateDnsName, eipInfo.tagValue)
+	_, err = c.K8s.SetLabel(privateDnsName, "BBBB")
 	if err != nil {
 		log.Error(err)
 		return
@@ -89,17 +84,27 @@ func (c *Controller) AssociateEip(instanceId, privateDnsName string)  {
 	log.Info("associated...")
 }
 
-func (c *Controller) FindAllocatableEip() (*EipInfo, error) {
-	allocationId, tagValue, err := c.Resource.FindAllocatableEip()
+func (c *Controller) Verify() {
+	eipInfoList, err := c.Resource.FindAssociatedEip()
 	if err != nil {
-		return nil, err
+		log.Error(err)
 	}
 
-	if allocationId == "" || tagValue == "" {
-		return nil, errors.New("not found allocatable eip")
-	}
+	for _, eipInfo := range eipInfoList {
+		instance, err := c.Resource.FindInstanceById(eipInfo.InstanceId)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
 
-	return &EipInfo{
-		allocationId: allocationId,
-		tagValue: tagValue}, nil
+		label, err := c.K8s.FindLabelValueByNodeName(instance.PrivateDnsName)
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		if label != eipInfo.TagValue {
+			c.K8s.SetLabel(instance.PrivateDnsName, eipInfo.TagValue)
+			log.Infof("update %s's label: %s -> %s (%s)", instance.InstanceId, label, eipInfo.TagValue, eipInfo.AllocationId)
+		}
+	}
 }

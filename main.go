@@ -1,12 +1,11 @@
 package main
 
 import (
-	"github.com/aidenMin/eip-controller/client"
 	"github.com/aidenMin/eip-controller/config"
 	"github.com/aidenMin/eip-controller/controller"
+	"github.com/aidenMin/eip-controller/k8s"
 	"github.com/aidenMin/eip-controller/provider"
 	"github.com/aidenMin/eip-controller/resource"
-	"github.com/aidenMin/eip-controller/source"
 	log "github.com/sirupsen/logrus"
 	"os"
 )
@@ -38,22 +37,25 @@ func doProcess(cfg *config.Config) {
 		log.Panic(err)
 	}
 
-	r, err := resource.NewAWSEC2(p)
+	r, err := resource.NewAWSEC2(p, cfg.EipTag)
 	if err != nil {
 		log.Panic(err)
 	}
 
+	c, err := k8s.NewClient(cfg.KubeConfig)
+	if err != nil {
+		log.Panic(err)
+	}
 
-	k := client.NewKubeClient(cfg.KubeConfig)
-	s, err := source.NewKubeNode(k, cfg.NodeLabel)
+	n, err := k8s.NewKubeNode(*c, cfg.NodeLabel)
 	if err != nil {
 		log.Panic(err)
 	}
 
 	ctrl := controller.Controller{
-		Resource: r,
-		Source:   s,
-		Interval: cfg.Interval,
+		Resource: 	r,
+		K8s:  	 	n,
+		Interval: 	cfg.Interval,
 	}
 
 	ctrl.Run()
